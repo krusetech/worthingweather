@@ -1,110 +1,182 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="refresh" content="900">
-  <title>Worthing SD Weather</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0b1f33;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      text-align: center;
-    }
-    .card {
-      width: 90%;
-      max-width: 1000px;
-      padding: 40px;
-      border-radius: 28px;
-      background: rgba(255,255,255,0.12);
-    }
-    .location { font-size: 42px; font-weight: bold; }
-    .temp { font-size: 96px; margin: 20px 0; }
-    .condition { font-size: 42px; }
-    .details { font-size: 28px; margin-top: 25px; }
-    .alert {
-      margin-top: 30px;
-      padding: 20px;
-      border-radius: 16px;
-      background: #b00020;
-      font-size: 30px;
-      font-weight: bold;
-    }
-    .updated {
-      margin-top: 30px;
-      font-size: 20px;
-      opacity: .8;
-    }
-  </style>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="900">
+<title>Worthing Weather</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(180deg, #4fa3ff, #2bb3d6);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  text-align: center;
+}
+
+.container {
+  width: 100%;
+}
+
+.icon {
+  font-size: 60px;
+  margin-bottom: 10px;
+}
+
+.datetime {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.location {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.temp {
+  font-size: 140px;
+  font-weight: bold;
+}
+
+.condition {
+  font-size: 30px;
+  margin-top: 10px;
+}
+
+.range {
+  font-size: 26px;
+  margin-top: 10px;
+  opacity: 0.95;
+}
+
+.updated {
+  margin-top: 25px;
+  font-size: 16px;
+  opacity: 0.7;
+}
+</style>
 </head>
+
 <body>
-  <div class="card">
-    <div class="location">Worthing, SD</div>
-    <div class="temp" id="temp">Loading...</div>
-    <div class="condition" id="condition"></div>
-    <div class="details" id="details"></div>
-    <div id="alert"></div>
-    <div class="updated" id="updated"></div>
-  </div>
+
+<div class="container">
+  <div class="icon" id="icon">☀️</div>
+  <div class="datetime" id="datetime"></div>
+  <div class="location">Worthing, SD</div>
+  <div class="temp" id="temp">--°</div>
+  <div class="condition" id="condition"></div>
+  <div class="range" id="range"></div>
+  <div class="updated" id="updated"></div>
+</div>
 
 <script>
 const pointUrl = "https://api.weather.gov/points/43.3294,-96.7645";
-const alertUrl = "https://api.weather.gov/alerts/active?point=43.3294,-96.7645";
 
-async function getJson(url) {
-  const response = await fetch(url, {
-    headers: {
-      "Accept": "application/geo+json",
-      "User-Agent": "WorthingSchoolSignage/1.0 (steven.kruse@k12.sd.us)"
-    }
-  });
-  if (!response.ok) throw new Error("Weather request failed");
-  return response.json();
+// Convert Celsius to Fahrenheit
+function cToF(c) {
+  return Math.round((c * 9 / 5) + 32);
 }
 
+// Get current grid value (for feels like temp)
+function currentGridValue(values) {
+  const now = new Date();
+  for (const item of values) {
+    const start = new Date(item.validTime.split("/")[0]);
+    const hours = item.validTime.includes("PT")
+      ? parseInt(item.validTime.split("PT")[1])
+      : 1;
+    const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
+    if (now >= start && now < end) return item.value;
+  }
+  return values[0]?.value ?? null;
+}
+
+// Pick icon based on forecast text
+function pickIcon(text) {
+  const t = text.toLowerCase();
+  if (t.includes("thunder")) return "⛈️";
+  if (t.includes("snow")) return "❄️";
+  if (t.includes("rain") || t.includes("showers")) return "🌧️";
+  if (t.includes("fog") || t.includes("mist")) return "🌫️";
+  if (t.includes("wind") || t.includes("breezy")) return "💨";
+  if (t.includes("cloud")) return "☁️";
+  if (t.includes("partly")) return "🌤️";
+  return "☀️";
+}
+
+// Format date/time like your example
+function formatDate() {
+  const now = new Date();
+  return now.toLocaleString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+// Fetch helper
+async function getJson(url) {
+  const res = await fetch(url, {
+    headers: {
+      "Accept": "application/geo+json",
+      "User-Agent": "WorthingWeatherDisplay/1.0 (steven.kruse@k12.sd.us)"
+    }
+  });
+  if (!res.ok) throw new Error("API error");
+  return res.json();
+}
+
+// Main loader
 async function loadWeather() {
   try {
-    const pointData = await getJson(pointUrl);
-    const forecastUrl = pointData.properties.forecast;
-    const hourlyUrl = pointData.properties.forecastHourly;
+    const point = await getJson(pointUrl);
 
-    const forecastData = await getJson(forecastUrl);
-    const hourlyData = await getJson(hourlyUrl);
-    const alertData = await getJson(alertUrl);
+    const forecast = await getJson(point.properties.forecast);
+    const hourly = await getJson(point.properties.forecastHourly);
+    const grid = await getJson(point.properties.forecastGridData);
 
-    const now = hourlyData.properties.periods[0];
-    const today = forecastData.properties.periods[0];
+    const now = hourly.properties.periods[0];
+    const today = forecast.properties.periods[0];
+    const tonight = forecast.properties.periods[1];
 
-    document.getElementById("temp").textContent = now.temperature + "°" + now.temperatureUnit;
+    // Feels like (wind chill / heat index)
+    const apparentC = currentGridValue(grid.properties.apparentTemperature.values);
+    const apparentF = apparentC !== null ? cToF(apparentC) : null;
+
+    // UI updates
+    document.getElementById("icon").textContent = pickIcon(now.shortForecast);
+    document.getElementById("datetime").textContent = formatDate();
+    document.getElementById("temp").textContent = now.temperature + "°";
     document.getElementById("condition").textContent = now.shortForecast;
-    document.getElementById("details").textContent =
-      "Wind: " + now.windSpeed + " " + now.windDirection +
-      " | " + today.detailedForecast;
 
-    if (alertData.features.length > 0) {
-      const alert = alertData.features[0].properties;
-      document.getElementById("alert").innerHTML =
-        '<div class="alert">' + alert.event + '</div>';
-    } else {
-      document.getElementById("alert").innerHTML = "";
+    let rangeText = tonight.temperature + "° / " + today.temperature + "°F";
+
+    if (apparentF !== null && apparentF !== now.temperature) {
+      rangeText += " | Feels like " + apparentF + "°";
     }
 
+    document.getElementById("range").textContent = rangeText;
+
     document.getElementById("updated").textContent =
-      "Updated: " + new Date().toLocaleString();
+      "Updated: " + new Date().toLocaleTimeString();
+
   } catch (err) {
-    document.getElementById("temp").textContent = "Weather unavailable";
-    document.getElementById("condition").textContent = "Check network or NWS API access";
+    document.getElementById("temp").textContent = "Error";
+    document.getElementById("condition").textContent = "Weather unavailable";
     console.error(err);
   }
 }
 
+// Run + refresh
 loadWeather();
 setInterval(loadWeather, 15 * 60 * 1000);
 </script>
+
 </body>
 </html>
