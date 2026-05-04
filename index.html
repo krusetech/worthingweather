@@ -11,58 +11,64 @@ html, body {
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
   background: linear-gradient(180deg, #4fa3ff, #2bb3d6);
   color: white;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
 }
 
+/* Full panel layout */
 .container {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
   align-items: center;
-  padding-top: 40px;
+  padding-top: 30px;
   box-sizing: border-box;
 }
 
+/* Weather icon */
 .icon {
-  font-size: 40px;
-  margin-bottom: 10px;
+  font-size: 42px;
+  margin-bottom: 8px;
 }
-  
+
+/* Date/time */
 .datetime {
-  font-size: 20px;
-  margin-bottom: 10px;
+  font-size: 18px;
+  margin-bottom: 8px;
 }
 
+/* Location */
 .location {
-  font-size: 18px;
-  margin-bottom: 20px;
+  font-size: 16px;
+  margin-bottom: 15px;
 }
 
+/* Big temperature */
 .temp {
-  font-size: 80px;
+  font-size: 72px;
   font-weight: bold;
+  line-height: 1;
 }
 
+/* Condition */
 .condition {
-  font-size: 20px;
-  margin-top: 10px;
+  font-size: 18px;
+  margin-top: 8px;
 }
 
+/* High/low + feels like */
 .range {
-  font-size: 18px;
-  margin-top: 10px;
+  font-size: 16px;
+  margin-top: 8px;
   opacity: 0.95;
 }
 
+/* Hide updated line completely */
 .updated {
-  margin-top: 25px;
-  font-size: 14px;
-  opacity: 0.7;
+  display: none;
 }
 </style>
 </head>
@@ -82,12 +88,12 @@ html, body {
 <script>
 const pointUrl = "https://api.weather.gov/points/43.3294,-96.7645";
 
-// Convert Celsius to Fahrenheit
+// Convert C → F
 function cToF(c) {
   return Math.round((c * 9 / 5) + 32);
 }
 
-// Get current grid value (for feels like temp)
+// Get current grid value (for feels like)
 function currentGridValue(values) {
   const now = new Date();
   for (const item of values) {
@@ -101,26 +107,25 @@ function currentGridValue(values) {
   return values[0]?.value ?? null;
 }
 
-// Pick icon based on forecast text
+// Pick icon
 function pickIcon(text) {
   const t = text.toLowerCase();
   if (t.includes("thunder")) return "⛈️";
   if (t.includes("snow")) return "❄️";
   if (t.includes("rain") || t.includes("showers")) return "🌧️";
-  if (t.includes("fog") || t.includes("mist")) return "🌫️";
+  if (t.includes("fog")) return "🌫️";
   if (t.includes("wind") || t.includes("breezy")) return "💨";
   if (t.includes("cloud")) return "☁️";
   if (t.includes("partly")) return "🌤️";
   return "☀️";
 }
 
-// Format date/time like your example
+// Format date/time
 function formatDate() {
   const now = new Date();
   return now.toLocaleString("en-US", {
     month: "short",
-    day: "2-digit",
-    year: "numeric",
+    day: "numeric",
     hour: "numeric",
     minute: "2-digit"
   });
@@ -138,7 +143,7 @@ async function getJson(url) {
   return res.json();
 }
 
-// Main loader
+// Load weather
 async function loadWeather() {
   try {
     const point = await getJson(pointUrl);
@@ -151,35 +156,30 @@ async function loadWeather() {
     const today = forecast.properties.periods[0];
     const tonight = forecast.properties.periods[1];
 
-    // Feels like (wind chill / heat index)
+    // Feels like
     const apparentC = currentGridValue(grid.properties.apparentTemperature.values);
     const apparentF = apparentC !== null ? cToF(apparentC) : null;
 
-    // UI updates
     document.getElementById("icon").textContent = pickIcon(now.shortForecast);
     document.getElementById("datetime").textContent = formatDate();
     document.getElementById("temp").textContent = now.temperature + "°";
     document.getElementById("condition").textContent = now.shortForecast;
 
-    let rangeText = tonight.temperature + "° / " + today.temperature + "°F";
+    let text = tonight.temperature + "° / " + today.temperature + "°F";
 
     if (apparentF !== null && apparentF !== now.temperature) {
-      rangeText += " | Feels like " + apparentF + "°";
+      text += " | Feels like " + apparentF + "°";
     }
 
-    document.getElementById("range").textContent = rangeText;
-
-    document.getElementById("updated").textContent =
-      "Updated: " + new Date().toLocaleTimeString();
+    document.getElementById("range").textContent = text;
 
   } catch (err) {
-    document.getElementById("temp").textContent = "Error";
+    document.getElementById("temp").textContent = "--";
     document.getElementById("condition").textContent = "Weather unavailable";
     console.error(err);
   }
 }
 
-// Run + refresh
 loadWeather();
 setInterval(loadWeather, 15 * 60 * 1000);
 </script>
