@@ -6,7 +6,6 @@
 <title>Worthing Weather</title>
 
 <style>
-/* Force 16:9 canvas so Newline doesn't shrink it */
 html, body {
   margin: 0;
   padding: 0;
@@ -18,9 +17,8 @@ html, body {
   overflow: hidden;
 }
 
-/* LEFT SIDEBAR AREA */
 .sidebar {
-  width: 100vw;            /* adjust to match your blue panel width */
+  width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -30,52 +28,75 @@ html, body {
   text-align: center;
 }
 
-/* Weather icon */
 .icon {
-  font-size: 48px;
-  margin-bottom: 10px;
+  font-size: 42px;
+  margin-bottom: 8px;
 }
 
-/* Date/time */
 .datetime {
-  font-size: 20px;
-  margin-bottom: 10px;
-}
-
-/* Location */
-.location {
   font-size: 18px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
 }
 
-/* Temperature */
+.location {
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+
 .temp {
-  font-size: 90px;
+  font-size: 72px;
   font-weight: bold;
   line-height: 1;
 }
 
-/* Feels like */
 .feels {
-  font-size: 24px;
+  font-size: 22px;
+  font-weight: bold;
   margin-top: 6px;
   color: #d6f3ff;
 }
 
-/* Condition */
 .condition {
-  font-size: 22px;
+  font-size: 18px;
   margin-top: 12px;
 }
 
-/* High / Low */
 .range {
-  font-size: 20px;
-  margin-top: 10px;
+  font-size: 16px;
+  margin-top: 8px;
   opacity: 0.95;
 }
 
-/* Hide updated line */
+.forecast-row {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.forecast-box {
+  min-width: 70px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.18);
+}
+
+.forecast-label {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.forecast-icon {
+  font-size: 28px;
+  margin: 4px 0;
+}
+
+.forecast-temp {
+  font-size: 18px;
+  font-weight: bold;
+}
+
 .updated {
   display: none;
 }
@@ -88,10 +109,27 @@ html, body {
   <div class="icon" id="icon">☀️</div>
   <div class="datetime" id="datetime"></div>
   <div class="location">Worthing, SD</div>
+
   <div class="temp" id="temp">--°</div>
   <div class="feels" id="feels"></div>
+
   <div class="condition" id="condition"></div>
   <div class="range" id="range"></div>
+
+  <div class="forecast-row">
+    <div class="forecast-box">
+      <div class="forecast-label">AM</div>
+      <div class="forecast-icon" id="amIcon">--</div>
+      <div class="forecast-temp" id="amTemp">--°</div>
+    </div>
+
+    <div class="forecast-box">
+      <div class="forecast-label">PM</div>
+      <div class="forecast-icon" id="pmIcon">--</div>
+      <div class="forecast-temp" id="pmTemp">--°</div>
+    </div>
+  </div>
+
   <div class="updated" id="updated"></div>
 </div>
 
@@ -113,7 +151,9 @@ function currentGridValue(values) {
 
     const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
 
-    if (now >= start && now < end) return item.value;
+    if (now >= start && now < end) {
+      return item.value;
+    }
   }
 
   return values[0]?.value ?? null;
@@ -123,23 +163,49 @@ function pickIcon(text) {
   const t = text.toLowerCase();
 
   if (t.includes("thunder")) return "⛈️";
-  if (t.includes("snow") || t.includes("flurries")) return "❄️";
-  if (t.includes("rain") || t.includes("showers")) return "🌧️";
-  if (t.includes("fog")) return "🌫️";
-  if (t.includes("wind")) return "💨";
+  if (t.includes("snow") || t.includes("flurries") || t.includes("blizzard")) return "❄️";
+  if (t.includes("sleet") || t.includes("freezing rain") || t.includes("ice")) return "🌨️";
+  if (t.includes("rain") || t.includes("showers") || t.includes("drizzle")) return "🌧️";
+  if (t.includes("fog") || t.includes("haze") || t.includes("mist")) return "🌫️";
+  if (t.includes("wind") || t.includes("breezy") || t.includes("gust")) return "💨";
   if (t.includes("partly")) return "🌤️";
-  if (t.includes("cloud")) return "☁️";
+  if (t.includes("cloud") || t.includes("overcast")) return "☁️";
 
   return "☀️";
 }
 
 function formatDate() {
-  return new Date().toLocaleString("en-US", {
+  const now = new Date();
+
+  return now.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit"
   });
+}
+
+function getPeriodNearHour(periods, targetHour) {
+  const today = new Date();
+  const todayDate = today.toDateString();
+
+  let closest = null;
+  let closestDiff = Infinity;
+
+  for (const period of periods) {
+    const start = new Date(period.startTime);
+
+    if (start.toDateString() !== todayDate) continue;
+
+    const diff = Math.abs(start.getHours() - targetHour);
+
+    if (diff < closestDiff) {
+      closest = period;
+      closestDiff = diff;
+    }
+  }
+
+  return closest;
 }
 
 async function getJson(url) {
@@ -150,7 +216,10 @@ async function getJson(url) {
     }
   });
 
-  if (!res.ok) throw new Error("API error");
+  if (!res.ok) {
+    throw new Error("API error");
+  }
+
   return res.json();
 }
 
@@ -169,20 +238,41 @@ async function loadWeather() {
     const apparentC = currentGridValue(grid.properties.apparentTemperature.values);
     const apparentF = apparentC !== null ? cToF(apparentC) : null;
 
+    const am = getPeriodNearHour(hourly.properties.periods, 9);
+    const pm = getPeriodNearHour(hourly.properties.periods, 15);
+
     document.getElementById("icon").textContent = pickIcon(now.shortForecast);
     document.getElementById("datetime").textContent = formatDate();
     document.getElementById("temp").textContent = now.temperature + "°";
     document.getElementById("condition").textContent = now.shortForecast;
 
+    if (apparentF !== null) {
+      document.getElementById("feels").textContent = "Feels like " + apparentF + "°";
+    } else {
+      document.getElementById("feels").textContent = "";
+    }
+
     document.getElementById("range").textContent =
       tonight.temperature + "° / " + today.temperature + "°F";
 
-    document.getElementById("feels").textContent =
-      apparentF !== null ? "Feels like " + apparentF + "°" : "";
+    if (am) {
+      document.getElementById("amIcon").textContent = pickIcon(am.shortForecast);
+      document.getElementById("amTemp").textContent = am.temperature + "°";
+    }
+
+    if (pm) {
+      document.getElementById("pmIcon").textContent = pickIcon(pm.shortForecast);
+      document.getElementById("pmTemp").textContent = pm.temperature + "°";
+    }
 
   } catch (err) {
+    document.getElementById("icon").textContent = "⚠️";
     document.getElementById("temp").textContent = "--";
+    document.getElementById("feels").textContent = "";
     document.getElementById("condition").textContent = "Weather unavailable";
+    document.getElementById("range").textContent = "";
+    document.getElementById("amIcon").textContent = "--";
+    document.getElementById("pmIcon").textContent = "--";
     console.error(err);
   }
 }
