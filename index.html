@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="900">
+  <title>Worthing SD Weather</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b1f33;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+    .card {
+      width: 90%;
+      max-width: 1000px;
+      padding: 40px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.12);
+    }
+    .location { font-size: 42px; font-weight: bold; }
+    .temp { font-size: 96px; margin: 20px 0; }
+    .condition { font-size: 42px; }
+    .details { font-size: 28px; margin-top: 25px; }
+    .alert {
+      margin-top: 30px;
+      padding: 20px;
+      border-radius: 16px;
+      background: #b00020;
+      font-size: 30px;
+      font-weight: bold;
+    }
+    .updated {
+      margin-top: 30px;
+      font-size: 20px;
+      opacity: .8;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="location">Worthing, SD</div>
+    <div class="temp" id="temp">Loading...</div>
+    <div class="condition" id="condition"></div>
+    <div class="details" id="details"></div>
+    <div id="alert"></div>
+    <div class="updated" id="updated"></div>
+  </div>
+
+<script>
+const pointUrl = "https://api.weather.gov/points/43.3294,-96.7645";
+const alertUrl = "https://api.weather.gov/alerts/active?point=43.3294,-96.7645";
+
+async function getJson(url) {
+  const response = await fetch(url, {
+    headers: {
+      "Accept": "application/geo+json",
+      "User-Agent": "WorthingSchoolSignage/1.0 (steven.kruse@k12.sd.us)"
+    }
+  });
+  if (!response.ok) throw new Error("Weather request failed");
+  return response.json();
+}
+
+async function loadWeather() {
+  try {
+    const pointData = await getJson(pointUrl);
+    const forecastUrl = pointData.properties.forecast;
+    const hourlyUrl = pointData.properties.forecastHourly;
+
+    const forecastData = await getJson(forecastUrl);
+    const hourlyData = await getJson(hourlyUrl);
+    const alertData = await getJson(alertUrl);
+
+    const now = hourlyData.properties.periods[0];
+    const today = forecastData.properties.periods[0];
+
+    document.getElementById("temp").textContent = now.temperature + "°" + now.temperatureUnit;
+    document.getElementById("condition").textContent = now.shortForecast;
+    document.getElementById("details").textContent =
+      "Wind: " + now.windSpeed + " " + now.windDirection +
+      " | " + today.detailedForecast;
+
+    if (alertData.features.length > 0) {
+      const alert = alertData.features[0].properties;
+      document.getElementById("alert").innerHTML =
+        '<div class="alert">' + alert.event + '</div>';
+    } else {
+      document.getElementById("alert").innerHTML = "";
+    }
+
+    document.getElementById("updated").textContent =
+      "Updated: " + new Date().toLocaleString();
+  } catch (err) {
+    document.getElementById("temp").textContent = "Weather unavailable";
+    document.getElementById("condition").textContent = "Check network or NWS API access";
+    console.error(err);
+  }
+}
+
+loadWeather();
+setInterval(loadWeather, 15 * 60 * 1000);
+</script>
+</body>
+</html>
