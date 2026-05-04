@@ -6,25 +6,24 @@
 <title>Worthing Weather</title>
 
 <style>
-body {
+html, body {
   margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   font-family: Arial, sans-serif;
   background: linear-gradient(180deg, #4fa3ff, #2bb3d6);
   color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  text-align: center;
 }
 
 .container {
-  width: 100%;
-}
-
-.icon {
-  font-size: 60px;
-  margin-bottom: 10px;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .datetime {
