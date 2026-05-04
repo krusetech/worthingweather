@@ -6,67 +6,76 @@
 <title>Worthing Weather</title>
 
 <style>
+/* Force 16:9 canvas so Newline doesn't shrink it */
 html, body {
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
+  width: 1920px;
+  height: 1080px;
   background: linear-gradient(180deg, #4fa3ff, #2bb3d6);
-  color: white;
   font-family: Arial, sans-serif;
+  color: white;
   overflow: hidden;
 }
 
-.container {
-  width: 100%;
+/* LEFT SIDEBAR AREA */
+.sidebar {
+  width: 400px;            /* adjust to match your blue panel width */
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 30px;
+  padding-top: 40px;
   box-sizing: border-box;
   text-align: center;
 }
 
+/* Weather icon */
 .icon {
-  font-size: 42px;
-  margin-bottom: 8px;
+  font-size: 48px;
+  margin-bottom: 10px;
 }
 
+/* Date/time */
 .datetime {
-  font-size: 18px;
-  margin-bottom: 8px;
+  font-size: 20px;
+  margin-bottom: 10px;
 }
 
+/* Location */
 .location {
-  font-size: 16px;
-  margin-bottom: 15px;
+  font-size: 18px;
+  margin-bottom: 20px;
 }
 
+/* Temperature */
 .temp {
-  font-size: 72px;
+  font-size: 90px;
   font-weight: bold;
   line-height: 1;
 }
 
+/* Feels like */
 .feels {
-  font-size: 22px;
-  font-weight: bold;
+  font-size: 24px;
   margin-top: 6px;
   color: #d6f3ff;
 }
 
+/* Condition */
 .condition {
-  font-size: 18px;
+  font-size: 22px;
   margin-top: 12px;
 }
 
+/* High / Low */
 .range {
-  font-size: 16px;
-  margin-top: 8px;
+  font-size: 20px;
+  margin-top: 10px;
   opacity: 0.95;
 }
 
+/* Hide updated line */
 .updated {
   display: none;
 }
@@ -75,7 +84,7 @@ html, body {
 
 <body>
 
-<div class="container">
+<div class="sidebar">
   <div class="icon" id="icon">☀️</div>
   <div class="datetime" id="datetime"></div>
   <div class="location">Worthing, SD</div>
@@ -104,9 +113,7 @@ function currentGridValue(values) {
 
     const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
 
-    if (now >= start && now < end) {
-      return item.value;
-    }
+    if (now >= start && now < end) return item.value;
   }
 
   return values[0]?.value ?? null;
@@ -116,21 +123,18 @@ function pickIcon(text) {
   const t = text.toLowerCase();
 
   if (t.includes("thunder")) return "⛈️";
-  if (t.includes("snow") || t.includes("flurries") || t.includes("blizzard")) return "❄️";
-  if (t.includes("sleet") || t.includes("freezing rain") || t.includes("ice")) return "🌨️";
-  if (t.includes("rain") || t.includes("showers") || t.includes("drizzle")) return "🌧️";
-  if (t.includes("fog") || t.includes("haze") || t.includes("mist")) return "🌫️";
-  if (t.includes("wind") || t.includes("breezy") || t.includes("gust")) return "💨";
+  if (t.includes("snow") || t.includes("flurries")) return "❄️";
+  if (t.includes("rain") || t.includes("showers")) return "🌧️";
+  if (t.includes("fog")) return "🌫️";
+  if (t.includes("wind")) return "💨";
   if (t.includes("partly")) return "🌤️";
-  if (t.includes("cloud") || t.includes("overcast")) return "☁️";
+  if (t.includes("cloud")) return "☁️";
 
   return "☀️";
 }
 
 function formatDate() {
-  const now = new Date();
-
-  return now.toLocaleString("en-US", {
+  return new Date().toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -146,10 +150,7 @@ async function getJson(url) {
     }
   });
 
-  if (!res.ok) {
-    throw new Error("API error");
-  }
-
+  if (!res.ok) throw new Error("API error");
   return res.json();
 }
 
@@ -173,21 +174,15 @@ async function loadWeather() {
     document.getElementById("temp").textContent = now.temperature + "°";
     document.getElementById("condition").textContent = now.shortForecast;
 
-    if (apparentF !== null) {
-      document.getElementById("feels").textContent = "Feels like " + apparentF + "°";
-    } else {
-      document.getElementById("feels").textContent = "";
-    }
-
     document.getElementById("range").textContent =
       tonight.temperature + "° / " + today.temperature + "°F";
 
+    document.getElementById("feels").textContent =
+      apparentF !== null ? "Feels like " + apparentF + "°" : "";
+
   } catch (err) {
-    document.getElementById("icon").textContent = "⚠️";
     document.getElementById("temp").textContent = "--";
-    document.getElementById("feels").textContent = "";
     document.getElementById("condition").textContent = "Weather unavailable";
-    document.getElementById("range").textContent = "";
     console.error(err);
   }
 }
